@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# This script allows you to launch several images
+# from this repository once they're built.
+#
+# Make sure you add the `docker run` command
+# in the header of the Dockerfile so the script
+# can find it and execute it.
+#
+# Use pulseaudio/Dockerfile and skype/Dockerfile as examples.
+
+set -e
+set -o pipefail
+
+RED="$(tput -Txterm setaf 1)"
+GREEN="$(tput -Txterm setaf 2)"
+BLUE="$(tput -Txterm setaf 4)"
+UNDERLINE="$(tput smul)"
+NORMAL="$(tput sgr0)"
+BOLD="$(tput bold)"
+
+if [[ $# -eq 0 ]]; then
+	echo "${BLUE}Usage: ${YELLOW}$0${NORMAL} [--test] image1 image2 ..."
+	exit 1
+fi
+
+if [[ "$1" == "--test" ]]; then
+	TEST=1
+	shift
+fi
+
+if [[ ! -d "$1" ]]; then
+	echo "${RED}${UNDERLINE}Unable to find container ${BOLD}$1${NORMAL}"
+	exit 1
+fi
+
+script=$(sed -n '/docker run/,/^#$/p' "$1/Dockerfile" | head -n -1 | sed "s/#//" | sed "s#\\\\##" | tr '\n' ' ' | sed "s/\$@//" | sed 's/""//')
+echo "${GREEN}Running${NORMAL} $script ${*:2}"
+
+if [ $TEST ]; then
+	echo "$script ${*:2}"
+else
+	eval "$script ${*:2}"
+fi
