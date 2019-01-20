@@ -1,0 +1,39 @@
+#!/bin/bash
+
+repo="${REPO_URL:-barolab}"
+errs="$(pwd)/errors"
+
+build() {
+    "Building image $1"
+	f=$1
+	image=${f%Dockerfile}
+	base=${image%%\/*}
+	dir=$(dirname "$f")
+	suite=${dir##*\/}
+
+	if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]]; then
+		suite=latest
+	fi
+
+	{
+		docker build --force-rm -t "${repo}/${base}:${suite}" "${dir}"
+	} || {
+		echo "${base}:${suite}" >> "${errs}"
+	}
+}
+
+if [ "$1" == "" ]; then
+    for project in **/Dockerfile; do
+        build "$project"
+    done
+else
+    build "$1"
+fi
+
+if [[ ! -f "$errs" ]]; then
+	echo "No errors, hooray !"
+else
+	echo "[ERROR] Some images did not build correctly, see below." >&2
+	echo "These images failes : $(cat "$errs")" >&2
+	exit 1
+fi

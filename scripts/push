@@ -1,45 +1,22 @@
 #!/bin/bash
 
-RED="$(tput -Txterm setaf 1)"
-GREEN="$(tput -Txterm setaf 2)"
-BLUE="$(tput -Txterm setaf 4)"
-UNDERLINE="$(tput smul)"
-NORMAL="$(tput sgr0)"
-BOLD="$(tput bold)"
+repo="${REPO_URL:-barolab}"
+errs="$(pwd)/errors"
 
-SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-REPO_URL="${REPO_URL:-barolab}"
-JOBS=${JOBS:-4}
-ERRORS="$(pwd)/errors"
+push() {
+	f=$1
+    image=${f%Dockerfile}
+	base=${image%%\/*}
+	dir=$(dirname "$f")
+	suite=${dir##*\/}
 
-title() {
-	echo "${UNDERLINE}${BOLD}${1}${NORMAL}"
-}
-
-info() {
-	echo "${BLUE}-${NORMAL} ${1}"
-}
-
-success() {
-	echo "${GREEN}✓${NORMAL} ${1}"
-}
-
-error() {
-	echo "${RED}✗${NORMAL} $1"
-}
-
-build_and_push() {
-	base=$1
-	suite=$2
-	build_dir=$3
-
-	title "Building ${REPO_URL}/${base}:${suite} for context ${build_dir}"
-	docker build --rm --force-rm -t "${REPO_URL}/${base}:${suite}" "${build_dir}" || return 1
-	success "Successfully built ${base}:${suite} with context ${build_dir}"
+    if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]]; then
+		suite=latest
+	fi
 
 	n=0
 	until [ $n -ge 5 ]; do
-		docker push "${REPO_URL}/${base}:${suite}" && break
+		docker push "${repo}/${base}:${suite}" && break
 		info "Try #$n failed... sleeping for 15 seconds"
 		n=$((n + 1))
 		sleep 15
@@ -47,56 +24,24 @@ build_and_push() {
 
 	# also push the tag latest for "stable" (chrome), "tools" (wireguard) or "3.5" tags for zookeeper
 	if [[ "$suite" == "stable" ]] || [[ "$suite" == "3.5" ]] || [[ "$suite" == "tools" ]]; then
-		info "Tagging ${REPO_URL}/${base}:${suite} to ${REPO_URL}/${base}:latest"
-		docker tag "${REPO_URL}/${base}:${suite}" "${REPO_URL}/${base}:latest"
-		docker push "${REPO_URL}/${base}:latest"
-	fi
-}
-dofile() {
-	f=$1
-	image=${f%Dockerfile}
-	base=${image%%\/*}
-	build_dir=$(dirname "$f")
-	suite=${build_dir##*\/}
-
-	if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]]; then
-		suite=latest
-	fi
-	{
-		$SCRIPT build_and_push "${base}" "${suite}" "${build_dir}"
-	} || {
-		echo "${base}:${suite}" >>"$ERRORS"
-	}
-	echo
-	echo
-}
-
-main() {
-	IFS=$'\n'
-	mapfile -t files < <(find -L . -iname '*Dockerfile' | sed 's|./||' | sort)
-	unset IFS
-
-	title "Running in parallel with ${JOBS} jobs."
-	parallel --tag --verbose --ungroup -j"${JOBS}" "$SCRIPT" dofile "{1}" ::: "${files[@]}"
-
-	if [[ ! -f "$ERRORS" ]]; then
-		success "No errors, hooray!"
-	else
-		error "[ERROR] Some images did not build correctly, see below." >&2
-		error "These images failed: $(cat "$ERRORS")" >&2
-		exit 1
+		info "Tagging ${repo}/${base}:${suite} to ${repo}/${base}:latest"
+		docker tag "${repo}/${base}:${suite}" "${repo}/${base}:latest"
+		docker push "${repo}/${base}:latest"
 	fi
 }
 
-run() {
-	args=$*
-	f=$1
+if [ "$1" == "" ]; then
+    for project in **/Dockerfile; do
+        push "${project}"
+    done
+else
+    push "$1"
+fi
 
-	if [[ "$f" == "" ]]; then
-		main "$args"
-	else
-		$args
-	fi
-}
-
-run "$@"
+if [[ ! -f "$errs" ]]; then
+	echo "No errors, hooray !"
+else
+	echo "[ERROR] Some images did not build correctly, see below." >&2
+	echo "These images failes : $(cat "$errs")" >&2
+	exit 1
+fi

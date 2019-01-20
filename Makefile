@@ -6,9 +6,15 @@ WHITE  := $(shell tput -Txterm setaf 7)
 RESET  := $(shell tput -Txterm sgr0)
 PWD    := $(shell pwd)
 
-.PHONY: help push run
+.PHONY: help deploy build push run
 default: help
 
+## Build & Push all images
+deploy: build push
+
+## Build all docker images
+build:
+	@$(CURDIR)/scripts/build
 
 ## Push all docker images.
 push:
@@ -28,7 +34,7 @@ help:
 	@awk '/^[a-zA-Z\-\_0-9]+:/ { \
 		helpMessage = match(lastLine, /^## (.*)/); \
 		if (helpMessage) { \
-			helpCommand = substr($$1, 0, index($$1, ":")-1); \
+			helpCommand = substr($$1, 0, index($$1, ":")); \
 			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
 			printf "  ${YELLOW}%-$(TARGET_MAX_CHAR_NUM)s${RESET} ${GREEN}%s${RESET}\n", helpCommand, helpMessage; \
 		} \
