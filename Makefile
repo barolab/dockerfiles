@@ -14,11 +14,11 @@ deploy: build push
 
 ## Build all docker images
 build:
-	@$(CURDIR)/scripts/build
+	@$(CURDIR)/scripts/build "$(DIR)"
 
 ## Push all docker images.
 push:
-	@$(CURDIR)/scripts/push
+	@$(CURDIR)/scripts/push "$(DIR)"
 
 ## Run a Dockerfile from the command at the top of the file (ex. DIR=skaffold ARG=version).
 run:
