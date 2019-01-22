@@ -10,8 +10,12 @@ push() {
 	dir=$(dirname "$f")
 	suite=${dir##*\/}
 
-    if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]]; then
+    if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]] || [[ "$suite" == "." ]]; then
 		suite=latest
+	fi
+
+	if [[ "$dir" == "." ]]; then 
+		dir="./${image}"
 	fi
 
 	n=0

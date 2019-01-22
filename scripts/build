@@ -4,15 +4,18 @@ repo="${REPO_URL:-barolab}"
 errs="$(pwd)/errors"
 
 build() {
-    "Building image $1"
-	f=$1
+ 	f=$1
 	image=${f%Dockerfile}
 	base=${image%%\/*}
 	dir=$(dirname "$f")
 	suite=${dir##*\/}
 
-	if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]]; then
+	if [[ -z "$suite" ]] || [[ "$suite" == "$base" ]] || [[ "$suite" == "." ]]; then
 		suite=latest
+	fi
+
+	if [[ "$dir" == "." ]]; then 
+		dir="./${image}"
 	fi
 
 	{
@@ -27,7 +30,7 @@ if [ "$1" == "" ]; then
         build "$project"
     done
 else
-    build "$1"
+    build "$1Dockerfile"
 fi
 
 if [[ ! -f "$errs" ]]; then
