@@ -7,7 +7,7 @@
 #
 
 FROM alpine
-ARG HELM_VERSION=v2.12.2
+ARG HELM_VERSION=v2.14.1
 RUN apk add --no-cache ca-certificates curl tar \
     && curl https://storage.googleapis.com/kubernetes-helm/helm-${HELM_VERSION}-linux-amd64.tar.gz > /tmp/helm.tar.gz \
     && mkdir -p /tmp/helm \
